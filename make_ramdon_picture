@@ -1,0 +1,159 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jun 15 15:21:29 2019
+
+@author: HOTARU
+"""
+
+
+from PIL import Image, ImageEnhance
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import glob
+import math
+import pickle
+import shutil
+
+
+def ImageToNewImage(folders, train_pieces, test_pieces):
+    global folder
+    folder = folders
+    ##source = r'E:\\pythonwork\\20170518' #選取圖片資料夾
+    source = glob.glob(folder + r"\*.png")
+    ##source = r'C:\\Users\\innolux\\Desktop\\pythonwork\\20170518'
+    for train_picture in source:
+        for count in range(0, train_pieces):
+            train_path = folder + r'\cloth_image_data\new_size_0' #選取新圖片資料夾
+            train_image_path = glob.glob(train_path + r"\*.png")
+            ##path = r'C:\Users\innolux\Desktop\pythonwork\20170518\new_size_0' 
+            train_name = os.path.join(train_path)
+            train_name = train_name + '\\{}.png'.format(len(train_image_path))
+            train_im = Image.open(train_picture).convert('RGB')
+            val = np.random.uniform(0.5,1.0)
+            train_im = ImageEnhance.Color(train_im).enhance(val)
+            train_im = ImageEnhance.Brightness(train_im).enhance(val)
+            ##train_im = ImageEnhance.Contrast(train_im).enhance(val)
+            ##train_im = ImageEnhance.Sharpness(train_im).enhance(val)
+            train_size = 32,32
+            train_im = train_im.resize(train_size)
+            train_data = train_im.getdata()
+            train_data = np.array(train_data,dtype='float')
+            np.savetxt(folder + r'\cloth_image_data\new_size_data_0\{}.txt'.format(len(train_image_path)),train_data) ##選取新圖片資料文件資料夾
+            ##np.savetxt('C:\\Users\\innolux\\Desktop\\pythonwork\\20170518\\new_size_data\\{}.txt'.format(len(train_image_path)),train_data)
+            train_im.save(train_name, 'PNG')
+    train_label_path = folder + r'\cloth_image_data\new_size_train_data_label'
+    train_path_count = folder + r'\cloth_image_data\new_size_data_0'
+    train_path_count = glob.glob(train_path_count + r"\*.txt")
+    y = 0
+    x = 0
+    for i in range(0, 12):
+        for j in range(0,train_pieces):
+            with open(train_label_path+r'\{}.txt'.format(y), 'w') as f:
+                f.write('{}'.format(x))
+            y += 1
+        x += 1
+    
+        ##source = r'E:\\pythonwork\\20170518' #選取圖片資料夾
+    source = glob.glob(folder + r"\*.png")
+    ##source = r'C:\\Users\\innolux\\Desktop\\pythonwork\\20170518'
+    for test_picture in source:
+        for count in range(0, test_pieces):
+            test_path = folder + r'\cloth_image_data\new_size_1' #選取新圖片資料夾
+            test_image_path = glob.glob(test_path + r"\*.png")
+            ##test_path = r'C:\Users\innolux\Desktop\pythonwork\20170518\new_size_0' 
+            test_name = os.path.join(test_path)
+            test_name = test_name + '\\{}.png'.format(len(test_image_path))
+            test_im = Image.open(test_picture).convert('RGB')
+            light = np.random.uniform(0.5,1.0)
+            color = np.random.uniform(0.5,1.0)
+            test_im = ImageEnhance.Color(test_im).enhance(color)
+            test_im = ImageEnhance.Brightness(test_im).enhance(light)
+            ##test_im = ImageEnhance.Contrast(train_im).enhance(val)
+            ##test_im = ImageEnhance.Sharpness(train_im).enhance(val)
+            test_size = 32, 32
+            test_im = test_im.resize(test_size)
+            test_data = test_im.getdata()
+            test_data = np.array(test_data,dtype='float')
+            np.savetxt(folder + r'\cloth_image_data\new_size_data_1\{}.txt'.format(len(test_image_path)),test_data) ##選取新圖片資料文件資料夾
+            ##np.savetxt('C:\\Users\\innolux\\Desktop\\pythonwork\\20170518\\new_size_data_1\\{}.txt'.format(len(test_image_path)),test_data)
+            test_im.save(test_name, 'PNG')
+    test_label_path = folder + r'\cloth_image_data\new_size_test_data_label'
+    test_path_count = folder + r'\cloth_image_data\new_size_data_1'
+    test_path_count = glob.glob(test_path_count + r"\*.txt")
+    y = 0
+    x = 0
+    for i in range(0, 12):
+        for j in range(0,test_pieces):
+            with open(test_label_path+r'\{}.txt'.format(y), 'w') as f:
+                f.write('{}'.format(x))
+            y += 1
+        x += 1
+        
+        ##print('已完成{}張'.format(pieces+10))
+            
+            
+def TrainDataCreate(folder):
+    train_data_path = folder + r'\cloth_image_data\new_size_data_0' #選取圖片總和資料文件資料夾
+    ##train_data_path = r'C:\\Users\\innolux\\Desktop\\pythonwork\\20170518\\new_size_data'
+    train_label_path = folder + r'\cloth_image_data\new_size_train_data_label'
+    train_images_label = glob.glob(train_label_path + r"\*.txt")
+    y_label_train = np.append(np.loadtxt(train_images_label[0]),np.loadtxt(train_images_label[1]))
+    for i in range(1,len(train_images_label)-1):
+        y_label_train = np.append(y_label_train,np.loadtxt(train_images_label[i+1]))
+    print(np.shape(y_label_train))
+    y_label_train = np.reshape(y_label_train,(i+2,1))
+       ##np.savetxt('E:\\pythonwork\\20170518\\new_size_train_data\\X_img_train.txt', X_img_train)
+    print(np.shape(y_label_train))
+    train_images_data = glob.glob(train_data_path + r"\*.txt")
+    X_img_train = np.append(np.loadtxt(train_images_data[0]),np.loadtxt(train_images_data[1]),axis=0)
+    for i in range(1,len(train_images_data)-1):
+        X_img_train = np.append(X_img_train,np.loadtxt(train_images_data[i+1]),axis=0)
+    print(np.shape(X_img_train))
+    X_img_train = np.reshape(X_img_train,(i+2,32,32,3))
+       ##np.savetxt('E:\\pythonwork\\20170518\\new_size_train_data\\X_img_train.txt', X_img_train)
+    print(np.shape(X_img_train))
+    train_im = Image.fromarray(X_img_train[0].astype(np.uint8))
+    train_im.show()
+    
+    test_data_path = folder + r'\cloth_image_data\new_size_data_1' #選取圖片總和資料文件資料夾
+    ##test_data_path = r'C:\\Users\\innolux\\Desktop\\pythonwork\\20170518\\new_size_data_1'
+    test_label_path = folder + r'\cloth_image_data\new_size_test_data_label'
+    test_images_label = glob.glob(test_label_path + r"\*.txt")
+    y_label_test = np.append(np.loadtxt(test_images_label[0]),np.loadtxt(test_images_label[1]))
+    for i in range(1,len(test_images_label)-1):
+        y_label_test = np.append(y_label_test,np.loadtxt(test_images_label[i+1]))
+    print(np.shape(y_label_test))
+    y_label_test = np.reshape(y_label_test,(i+2,1))
+       ##np.savetxt('E:\\pythonwork\\20170518\\new_size_train_data\\X_img_test.txt', X_img_test)
+    print(np.shape(y_label_test))
+    train_images_data = glob.glob(test_data_path + r"\*.txt")
+    X_img_test = np.append(np.loadtxt(train_images_data[0]),np.loadtxt(train_images_data[1]),axis=0)
+    for i in range(1,len(train_images_data)-1):
+        X_img_test = np.append(X_img_test,np.loadtxt(train_images_data[i+1]),axis=0)
+    print(np.shape(X_img_test))
+    X_img_test = np.reshape(X_img_test,(i+2,32,32,3))
+       ##np.savetxt('E:\\pythonwork\\20170518\\new_size_train_data\\X_img_test.txt', X_img_test)
+    print(np.shape(X_img_test))
+    test_im = Image.fromarray(X_img_test[0].astype(np.uint8))
+    test_im.show()    
+    return (X_img_train, y_label_train), (X_img_test, y_label_test)
+
+def Load_data(folder):
+    ##folder =r'D:\pythonwork'
+    if os.path.isfile(folder + r'\cloth_image_data\Picture.pickle') is True:
+        with open(folder + r'\cloth_image_data\Picture.pickle', 'rb') as f:
+            (X_img_train, y_label_train), (X_img_test, y_label_test) = pickle.load(f)
+    else:
+        data = TrainDataCreate(folder)
+        with open(folder + r'\cloth_image_data\Picture.pickle', 'wb') as f:
+            pickle.dump(data, f)
+        with open(folder + r'\cloth_image_data\Picture.pickle','rb') as f:
+            try:
+                (X_img_train, y_label_train), (X_img_test, y_label_test) = pickle.load(f)
+            except:
+                print('pickle load failed')
+            else:
+                print('pickle load successfully')
+    return (X_img_train, y_label_train), (X_img_test, y_label_test)
+
