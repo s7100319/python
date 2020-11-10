@@ -1,0 +1,213 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Oct 24 20:29:05 2019
+
+@author: Shiqin.li
+"""
+
+import cv2
+import numpy as np
+import math
+import glob
+
+class mouseParam:
+    def __init__(self, input_img_name):
+        #d滑鼠輸入用數值
+        self.mouseEvent = {"x":None, "y":None, "event":None, "flags":None}
+        #滑鼠輸入用設定
+        cv2.setMouseCallback(input_img_name, self.__CallBackFunc, None)
+    
+    #回歸函數
+    def __CallBackFunc(self, eventType, x, y, flags, userdata):
+        
+        self.mouseEvent["x"] = x
+        self.mouseEvent["y"] = y
+        self.mouseEvent["event"] = eventType    
+        self.mouseEvent["flags"] = flags    
+
+    #回歸滑鼠輸入數值的函數
+    def getData(self):
+        return self.mouseEvent
+    
+    #回歸滑鼠指令的函數
+    def getEvent(self):
+        return self.mouseEvent["event"]                
+
+    #回歸滑鼠旗標的函數
+    def getFlags(self):
+        return self.mouseEvent["flags"]                
+
+    #回歸X座標的函數
+    def getX(self):
+        return self.mouseEvent["x"]  
+
+    #回歸Y座標的函數
+    def getY(self):
+        return self.mouseEvent["y"]  
+
+    #回歸X和Y座標的函數
+    def getPos(self):
+        return (self.mouseEvent["x"], self.mouseEvent["y"])
+    
+#指定圖面上選定位置進行截圖
+def picture_catch(chg_img):
+    read = cv2.imread(chg_img)
+    
+    #畫面視窗名稱
+    window_name = "input window"
+    
+    #顯示畫面
+    cv2.imshow(window_name, read)
+    
+    #回歸函數設定
+    mouseData = mouseParam(window_name)
+    
+    xy = []
+    while 1:
+        cv2.waitKey(20)
+        #按左鍵的話會記錄選定的截圖
+        if mouseData.getEvent() == cv2.EVENT_LBUTTONDOWN:
+            xy.append(mouseData.getPos())
+            print(mouseData.getPos())
+        #按右鍵則會結束
+        elif mouseData.getEvent() == cv2.EVENT_RBUTTONDOWN:
+            break;
+            
+    img = read[xy[0][1]:xy[-1][1],xy[0][0]:xy[-1][0]]
+    cv2.imwrite(r'D:\pythonwork\20191018\edge_img\1.png', img)
+    cv2.destroyAllWindows()            
+    print("Finished")
+
+def matchtemplate():
+    
+    #匯入變形過圖檔    
+    img_chg = cv2.imread(r'D:\pythonwork\20191018\picture\08182.png')
+    
+    #匯入原圖檔 
+    img_ori = cv2.imread(r'D:\pythonwork\20191018\picture\08181.png')
+    size = (img_chg.shape[0] / img_ori.shape[0], img_chg.shape[1] / img_ori.shape[1])
+
+    
+    img2 = img_ori.copy()
+    
+    #匯入變形後圖檔截圖
+    template = cv2.imread(r'D:\pythonwork\20191018\edge_img\1.png')
+    tp_size = template.shape
+    
+    template = cv2.resize(template,(int(tp_size[1]/size[1]),int(tp_size[0]/size[0])))
+    
+    w = template.shape[1]
+    h = template.shape[0]
+    
+    # All the 6 methods for comparison in a list
+    img_ori = img2.copy() 
+    
+    # Apply template Matching
+    
+    res = cv2.matchTemplate(img_ori,template,cv2.TM_CCOEFF)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+    
+    # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
+    top_left = max_loc
+    
+    #top_left = (int(top_left[0]),int(top_left[1]))
+    bottom_right = (top_left[0] + w, top_left[1] + h)
+    
+    img = img_ori[top_left[1]:bottom_right[1],top_left[0]:bottom_right[0]]
+    
+    cv2.imwrite(r'D:\pythonwork\20191018\edge_img\2.png',img)
+    cv2.rectangle(img_ori,top_left, bottom_right, 255, 2)
+    cv2.imshow('match', img_ori)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+def picture_gray_edge(edge_img_path):
+    gray_path = r'D:\pythonwork\20191018\cut_mask_area'
+    path_img = glob.glob(edge_img_path + '\*.png')
+    path_img_cnt = 0
+    for img_cnt in path_img:
+        path_img_cnt +=1
+        img_1 = cv2.imread(img_cnt)
+        gray_1 = cv2.blur(img_1, (5, 5),0)
+        Edge_1 = cv2.Canny(gray_1,10,160,2) 
+        #(cnts,_) = cv2.findContours(Edge_1,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+        
+        (cnts,_) = cv2.findContours(Edge_1,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    
+        cv2.imwrite(gray_path + r'\{}.png'.format(path_img_cnt), Edge_1)
+        cv2.imshow("Mask",Edge_1)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    
+def circle_fitness_line(cut_mask):
+    src = cv2.imread(cut_mask)#匯入照片
+    src = cv2.GaussianBlur(src, (3, 3), 0)#高斯模糊
+    gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)#彩色轉灰階
+    ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)#門檻值
+    contours, hierachy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)#找出輪廓
+    #建立空字串
+    text_list = []
+    for i in range(len(contours)):
+        rrt = cv2.fitEllipse(contours[i])
+        cv2.ellipse(src, rrt, (0, 0, 255), 2, cv2.LINE_AA)
+        x, y = rrt[0]
+        text = "{},{}".format(int(x),int(y))
+        text_list.append([int(x),int(y)])
+        cv2.circle(src, (np.int(x), np.int(y)), 4, (255, 0, 0), -1, 8, 0)#畫出
+        cv2.putText(src, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 255, 255), 1, cv2.LINE_AA)#顯示圓點座標
+        print(int(x),int(y))
+    
+    #將取得到的橢圓擬合中心轉成陣列
+    cut_area = np.array(text_list)
+    x1, y1 = cut_area[0][0],cut_area[0][1]#p1座標
+    x2, y2 = cut_area[1][0],cut_area[1][1]#p2座標
+    x3, y3 = cut_area[2][0],cut_area[2][1]#p3座標
+    x4, y4 = cut_area[3][0],cut_area[3][1]#p4座標
+    
+    cv2.line(src, (x1, y1), (x2, y2), (0, 0, 255), 2) #p1與p2座標畫出X軸長度
+    cv2.line(src, (x1, y1), (x3, y3), (0, 0, 255), 2) #p1與P3座標畫出Y軸長度
+    
+    def line_len(x1, y1, x2, y2):#定義p1,p2來點取得線長
+        x = x1 - x2
+        y = y1 - y2
+        line_len = math.sqrt((x**2)+(y**2))
+        return float(line_len)
+    
+    line_x = line_len(x1, y1, x2, y2)#計算p1到p2座標長度
+    line_y = line_len(x1, y1, x3, y3)#計算p1到p3座標長度
+    text_x = 'X:' + format(line_x, '.2f') 
+    text_y = 'Y:' + format(line_y, '.2f') #顯示p1與pˇ座標Y軸長度
+    text_x_p = cut_area[0]+50
+    text_y_p = cut_area[0]-30
+    cv2.putText(src, text_x, (text_x_p[0]-20,text_x_p[1]-75), cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 255), 1, cv2.LINE_AA)#顯示p1與p2座標x軸長度
+    cv2.putText(src, text_y, (text_y_p[0]+60,text_y_p[1]-10), cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 0, 255), 1, cv2.LINE_AA)#顯示p1與pˇ座標Y軸長度
+  
+    cv2.imshow("fit circle", src)#顯示座標畫面
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return line_x, line_y
+
+if __name__ == "__main__":
+    #匯入原圖放大或縮小後的圖檔
+    p1 = r'D:\pythonwork\20191018\picture\08181.png'
+    
+    #將原圖放大或縮小後的圖檔截圖
+    picture_catch(p1)
+    
+    #將截圖去比對原圖並在原圖同位子進行截圖
+    matchtemplate()
+    
+    #將截圖成二值圖
+    edge_img_path = r'D:\pythonwork\20191018\edge_img'
+    picture_gray_edge(edge_img_path)
+
+    
+    #將二值圖相減算出相差XY
+    gray_edge_path = r'D:\pythonwork\20191018\cut_mask_area'
+    gray_edge_img = glob.glob(gray_edge_path + r'\*.png')
+    x_y =[]
+    for img in gray_edge_img:
+        x_y.append(circle_fitness_line(img))
+    print('X_less:', format(x_y[0][0]-x_y[1][0], '.2f'))
+    print('Y_less:', format(x_y[1][1]-x_y[1][1], '.2f'))
