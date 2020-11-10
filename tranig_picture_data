@@ -1,0 +1,639 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun 26 18:48:38 2019
+
+@author: Shiqin.li
+"""
+
+import tkinter as tk
+from tkinter import ttk 
+from tkinter import filedialog
+from Keras_test_5 import ImageToNewImage, Load_data
+import os
+import shutil
+import datetime
+from PIL import Image, ImageEnhance, ImageTk
+import time
+import numpy as np
+
+
+
+class Application(tk.Frame):
+    def __init__(self,master):
+        super().__init__(master)
+        self.pack()
+
+        master.geometry("400x280")
+        master.title("Cloth Discrimination")
+        men = tk.Menu(master)
+        master.config(menu=men)
+        #メニューに親メニュー（ファイル）を作成する 
+        menu_file = tk.Menu(master) 
+        men.add_cascade(label='File', menu=menu_file) 
+        #親メニューに子メニュー（開く・閉じる）を追加する 
+        menu_file.add_command(label='開啟檔案資料夾', command=self.Open_file) 
+        menu_file.add_separator() 
+        menu_file.add_command(label='關閉檔案資料夾', command=self.Close_disp)
+        ##cloth_image_path = fld + ''
+        ##cloth_image = tk.Label()
+        self.txt_1 = tk.Entry(width = 25)
+        self.txt_1.place(x=200,y=55)
+        self.txt_2 = tk.Entry(width = 25)
+        self.txt_2.place(x=200,y=115)        
+        ##self.framel = tk.Frame(master, padx=50)
+        ##self.image_label = tk.Label(self.framel,image = cloth_image)
+        button = tk.Button(master,text = u'訓練用圖片製造', command = self.Traindata_creat)
+        button.place(x=30,y=20)
+        button1 = tk.Button(master,text = u'開始進行訓練', command = self.Keras_traning)
+        button1.place(x=30,y=70)
+        ##Button2 = tk.Button(master,text = u'設定機率', command = self.Gett)
+        ##Button2.place(x=150,y=150)
+        button3 = tk.Button(master,text = u'開啟定位影像辨識', command = self.Video_open)
+        button3.place(x=30,y=120)
+        button4 = tk.Button(master,text = u'開啟物件影像辨識', command = self.Video_move_open)
+        button4.place(x=30,y=170)
+        button5 = tk.Button(master,text = u'選擇圖片', command = self.Open_image)
+        button5.place(x=200,y=20)
+        button6 = tk.Button(master,text = u'顯示圖片', command = self.Image_display)
+        button6.place(x=200,y=80)
+        self.image_label = tk.Label(master)
+        self.image_label.place(x=200,y=140)
+        ##self.image_label.pack()
+    
+    ##def gett(self,master):
+        ##clothlabel = tk.Label(master, text = '機率設定')
+        ####clothlabel.grid(column=0,row=0)
+        ##clothlabel.place(x=50,y=50)
+        ##self.value_entry = tk.Entry(master,width=20)
+        ##self.value_entry.place(x=50,y= 120)
+        ##self.value_entry.get()
+        
+        
+    def Keras_layer_set(self):
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+        
+        
+        path = fld + r'\SaveModel\cifarCnnModelnew.h5'
+        
+        model = Sequential()
+        
+        #卷積層1與池化層1
+        model.add(Conv2D(filters=32,kernel_size=(3, 3),input_shape=(32, 32,3),
+                         activation='relu', padding='same'))
+        model.add(Dropout(0.25))
+        model.add(Conv2D(filters=32, kernel_size=(3, 3),
+                         activation='relu', padding='same'))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        
+        #建立神經網路(平坦層、隱藏層、輸出層)
+        model.add(Flatten())
+        model.add(Dense(2500, activation='relu'))
+        model.add(Dropout(0.3))
+        model.add(Dense(1500, activation='relu'))
+        model.add(Dropout(0.25))
+        model.add(Dense(12, activation='softmax'))
+        print(model.summary())
+        
+        ##model.load_weights(path)
+        label_dict={0:"Red",1:"Dark Goldenrod",2:"Monochrome",3:"Dark Slate Blue",4:"Mineral Violet",
+                5:"Dark Cyan",6:"Fire Brick",7:"Rosy Brown",8:"Royal blue",9:"Dark Olive Green",10:"Coffee",11:"Grayish Purple"}
+
+        return model
+        
+    def Image_display(self):
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+        
+        
+        path = fld + r'\SaveModel\cifarCnnModelnew.h5'
+        # # 建立模型
+
+        model = self.Keras_layer_set()
+        
+        model.load_weights(path)
+        label_dict={0:"Red",1:"Dark Goldenrod",2:"Monochrome",3:"Dark Slate Blue",4:"Mineral Violet",
+                5:"Dark Cyan",6:"Fire Brick",7:"Rosy Brown",8:"Royal blue",9:"Dark Olive Green",10:"Coffee",11:"Grayish Purple"}
+
+        
+        cimg = Image.open(os.path.join(self.txt_1.get())).convert('RGB')
+        
+        size = 32,32
+        imgss = cimg.resize(size)
+        imgss = np.reshape(imgss,(1,32,32,3))
+        pred = model.predict(imgss, batch_size=1,verbose=0)
+        pred_label = np.argmax(pred)
+        image_txt =label_dict[pred_label]
+        
+        size_1 = 128, 128
+        cimg = cimg.resize(size_1)
+        cimg = ImageTk.PhotoImage(cimg)
+        
+        print(self.txt_1.get())
+        self.txt_2.insert(0, image_txt)
+        self.image_label.config(image = cimg)
+        self.image_label = cimg
+        
+    
+    def Gett(self):
+        print(self.value_entry.get())
+        
+    def Open_file(self): 
+        dir = 'C:'
+        global fld
+        fld = filedialog.askdirectory(initialdir = dir)
+        print(fld)
+        return fld
+    def Close_disp(self):
+        pass
+    
+    def Open_image(self):
+        dir = 'C:'
+        typ = [('檔案類型','*.png',),('檔案類型','*.jpg',)]
+        global fld_image
+        fld_image = filedialog.askopenfilename(initialdir = dir,filetypes = typ)
+        cimg = fld_image
+        self.txt_1.insert(0, cimg)
+        return fld_image
+    
+    
+    def Traindata_creat(self):
+        path = fld + r'\cloth_image_data'
+        if os.path.isdir(path):
+                try:
+                    shutil.rmtree(path)
+                except OSError as e:
+                    print(e)
+                else:
+                    print('The directory id deleted successfully')
+        if not os.path.isdir(path):
+            os.mkdir(path)
+            data_path = []
+            data_path.append(r'\new_size_0')
+            data_path.append(r'\new_size_1')
+            data_path.append(r'\new_size_data_0')
+            data_path.append(r'\new_size_data_1')
+            data_path.append(r'\new_size_test_data_label')
+            data_path.append(r'\new_size_train_data_label')
+            for i in data_path:
+                if not os.path.isdir(path + i):
+                    os.mkdir(path + i)
+        ImageToNewImage(fld,500,500)
+        Load_data(fld)
+    
+    
+    def Keras_traning(self):
+        import Keras_test_5
+        import numpy
+        from keras.datasets import cifar10
+        import numpy as np
+        from PIL import Image, ImageEnhance
+        import matplotlib.pyplot as plt
+        import os
+        import glob
+        import math
+        import pickle
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+        from keras.utils import np_utils
+        np.random.seed(10)
+        
+        
+        
+        path = fld + r'\SaveModel'
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        
+        
+        (X_img_train, y_label_train), (X_img_test, y_label_test) = Keras_test_5.Load_data(fld)
+        np.shape(y_label_test)
+        
+        print("train data:",'images:',X_img_train.shape," labels:",y_label_train.shape) 
+        print("test  data:",'images:',X_img_test.shape ," labels:",y_label_test.shape) 
+        
+        X_img_train_normalize = X_img_train.astype('float32') / 255.0
+        X_img_test_normalize = X_img_test.astype('float32') / 255.0
+        
+        y_label_train_OneHot = np_utils.to_categorical(y_label_train)
+        y_label_test_OneHot = np_utils.to_categorical(y_label_test)
+        
+        y_label_test_OneHot.shape
+        
+        
+        # # 建立模型
+
+        model = self.Keras_layer_set()
+        
+        # # 載入之前訓練的模型
+        try:
+            model.load_weights("SaveModel/cifarCnnModelnew.h5")
+            print("載入模型成功!繼續訓練模型")
+        except :    
+            print("載入模型失敗!開始訓練一個新模型")
+            
+            
+            # # 訓練模型
+        model.compile(loss='categorical_crossentropy', optimizer='adam',
+                      metrics=['accuracy'])
+        
+        train_history=model.fit(X_img_train_normalize, y_label_train_OneHot,
+                                validation_split=0.15,
+                                epochs=20, batch_size=300, verbose=1) 
+        
+        def show_train_history(train_acc,test_acc):
+            plt.plot(train_history.history[train_acc])
+            plt.plot(train_history.history[test_acc])
+            plt.title('Train History')
+            plt.ylabel('Accuracy')
+            plt.xlabel('Epoch')
+            plt.legend(['train', 'test'], loc='upper left')
+            plt.show()
+            
+            
+        show_train_history('acc','val_acc')
+        show_train_history('loss','val_loss')
+        
+        
+        # # 評估模型準確率
+        scores = model.evaluate(X_img_test_normalize, 
+                                y_label_test_OneHot,verbose=0)
+        scores[1]
+        
+        # # 進行預測
+        prediction=model.predict_classes(X_img_test_normalize)
+        prediction[:10]
+        
+        label_dict={0:"Red",1:"Dark Goldenrod",2:"Monochrome",3:"Dark Slate Blue",4:"Mineral Violet",
+            5:"Dark Cyan",6:"Fire Brick",7:"Grayish Purple",8:"Royal blue ",9:"Dark Olive Green",10:"Coffee",11:"Grayish Purple"}
+        
+        
+        def plot_images_labels_prediction(images,labels,prediction,
+                                          idx,num=10):
+            fig = plt.gcf()
+            fig.set_size_inches(12, 14)
+            if num>25: num=25
+            for i in range(0, num):
+                ax=plt.subplot(5,5, 1+i)
+                ax.imshow(images[idx],cmap='binary')
+                
+                title=str(i)+','+label_dict[labels[i][0]]
+                if len(prediction)>0:
+                    title+='=>'+label_dict[prediction[i]]
+                    
+                    ax.set_title(title,fontsize=10) 
+                    ax.set_xticks([]);ax.set_yticks([])        
+                idx+=1 
+            plt.show()
+        
+        
+        plot_images_labels_prediction(X_img_test_normalize,y_label_test,
+                                      prediction,0,10)
+        
+        # # 查看預測機率
+        Predicted_Probability=model.predict(X_img_test_normalize)
+        
+        def show_Predicted_Probability(X_img,Predicted_Probability,i):
+            plt.figure(figsize=(2,2))
+            plt.imshow(np.reshape(X_img_test[i]/255.0,(32, 32,3)))
+            plt.show()
+            for j in range(12):
+                print(label_dict[j]+' Probability:%1.9f'%(Predicted_Probability[i][j]))
+        
+        
+        
+        show_Predicted_Probability(X_img_test,Predicted_Probability,0)
+        
+        show_Predicted_Probability(X_img_test,Predicted_Probability,3)
+        
+        
+        # # Save model to JSON
+        model_json = model.to_json()
+        with open("SaveModel/cifarCnnModelnew.json", "w") as json_file:
+            json_file.write(model_json)
+            
+        # # Save Model to YAML
+        model_yaml = model.to_yaml()
+        with open("SaveModel/cifarCnnModelnew.yaml", "w") as yaml_file:
+            yaml_file.write(model_yaml)
+            
+        # # Save Weight to h5 
+        model.save_weights("SaveModel/cifarCnnModelnew.h5")
+        print("Saved model to disk")
+        
+        
+        
+    def Video_open(self):
+        import cv2
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+        cam=cv2.VideoCapture(0)#設定攝影機
+        
+        path = fld + r'\SaveModel\cifarCnnModelnew.h5'
+        
+        model = self.Keras_layer_set()
+        model.load_weights(path)
+        
+        #設定鏡頭畫面大小
+        width = 420
+        height = 600
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        area = width * height
+        time.sleep(5)
+        # 初始化平均影像
+        
+        ret,img=cam.read()
+        avg = cv2.blur(img, (4, 4))
+        avg_float = np.float32(avg)
+        label_dict={0:"Red",1:"Dark Goldenrod",2:"Monochrome",3:"Dark Slate Blue",4:"Mineral Violet",
+                    5:"Dark Cyan",6:"Fire Brick",7:"Rosy Brown",8:"Royal blue",9:"Dark Olive Green",10:"Coffee",11:"Grayish Purple"}
+        
+        path = fld + r'\save'
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        
+        
+
+        
+        # 鏡頭讀取
+        while cam.isOpened():
+            ret,img=cam.read()#ret確認影像是否讀取:
+            #vis=img.copy()#原始鏡頭影像
+            #cv2.imshow('getcamera',vis) 
+            
+            # 模糊處理
+            blur = cv2.blur(img, (4, 4))
+            # 計算目前影格與平均影像的差異值
+            diff = cv2.absdiff(avg, blur)
+            
+            # 將圖片轉為灰階
+            gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            
+            # 篩選出變動程度大於門檻值的區域
+            ret,thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+            
+            # 使用型態轉換函數去除雜訊
+            kernel = np.ones((5, 5), np.uint8)
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+            
+
+            #OpenCV舊版，4.0以下的版本，返回三個參數
+            #cntImg,cnts, _ = cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            #OpenCV 新版，4.0及其以上的版本，返回兩個參數
+            cnts,hierarchy= cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            
+            
+            
+            def Video_capture(imgsssss):
+                imgss = Image.open('C:\\Users\\innolux\\Desktop\\pythonwork\\UI\\save\\0.jpg').convert('RGB')
+                size = 32,32
+                imgss = imgss.resize(size)
+                imgss = np.reshape(imgss,(1,32,32,3))
+                pred = model.predict(imgss, batch_size=1,verbose=0)
+                imgss_normalize = imgss.astype('float32') / 255.0
+                score = model.predict(imgss_normalize)
+                probability = np.max(score)
+                return pred, probability
+            
+
+            def Image_capture(img_1):
+                detect_count = 0
+                imgssss = cv2.rectangle(img_1, (384, 304), (256, 176), (0, 0, 255), 2)
+                cv2.imwrite('C:\\Users\\innolux\\Desktop\\pythonwork\\UI\\save\\' + str(detect_count) + '.jpg', img[176:304, 256:384])
+                ##imgsss = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                ##cv2.imwrite('D:\\pythonwork\\save\\' + str(detect_count) + '.jpg', img[y:y + h, x:x + w])
+                detect_count += 1
+                    
+                return imgssss
+            
+            
+                
+            imgssss = Image_capture(img)
+            
+            ##靈敏度設定
+            try:
+                pred, probability = Video_capture(imgssss)
+            except AttributeError:
+                continue
+            
+            pred_label = np.argmax(pred)
+                
+                ##imgss = Image.fromarray(imgs.astype(np.uint8))
+                ##size = 32,32
+                ##imgss = imgss.resize(size)
+                ##imgss = np.array(imgss,dtype='float')
+                ##imgss = np.reshape(imgss,(1,32,32,3))
+                ##pred = model.predict(imgss, batch_size=1,verbose=0)
+                #score = np.max(pred)
+                ##pred_label = np.argmax(pred)
+            
+            #原始鏡頭影像水平翻轉
+            flipped = cv2.flip(img, 1)
+            ##imgss = Image.open('D:\\pythonwork\\save\\0.jpg').convert('RGB')
+            
+
+            
+            
+            # 畫出等高線（除錯用）
+            ##    cv2.drawContours(img, cntsc, -1, (0, 255, 255), 2)
+            
+            
+            if probability*100 < 90:
+                text3 = 'Resoult: Training NG'
+                text2 = 'PROD No.:Unknown'
+            else:
+                text3 = 'Resoult: Training OK'
+                text2 = 'PROD No.:{}'.format(label_dict[pred_label])
+            
+            cv2.putText(flipped, text2, (10, 35), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            
+            cv2.putText(flipped, text3, (10, 50), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            
+            text4 = 'Resoult OK/NG:{}'.format(probability)
+            cv2.putText(flipped, text4, (10, 70), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            # 顯示偵測結果影像
+            cv2.imshow("Flipped Horizontally", flipped)   
+            
+            #按下Q跳離畫面  
+            if cv2.waitKey(5) & 0xFF == ord('q'):
+                break    
+            
+            # 更新平均影像
+            cv2.accumulateWeighted(blur, avg_float, 0.2)
+            cv2.convertScaleAbs(avg_float)
+        cam.release() #交出控制權
+        cv2.destroyAllWindows()#關閉視窗
+
+
+    def Video_move_open(self):
+        import cv2
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
+        cam=cv2.VideoCapture(0)#設定攝影機
+        
+        path = fld + r'\SaveModel\cifarCnnModelnew.h5'
+        
+        
+        model = self.Keras_layer_set()
+        model.load_weights(path)
+        #設定鏡頭畫面大小
+        width = 420
+        height = 600
+        cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        area = width * height
+        time.sleep(5)
+        # 初始化平均影像
+        
+        ret,img=cam.read()
+        avg = cv2.blur(img, (4, 4))
+        avg_float = np.float32(avg)
+        label_dict={0:"Red",1:"Dark Goldenrod",2:"Monochrome",3:"Dark Slate Blue",4:"Mineral Violet",
+                    5:"Dark Cyan",6:"Fire Brick",7:"Rosy Brown",8:"Royal blue",9:"Dark Olive Green",10:"Coffee",11:"Grayish Purple"}
+        
+        path = fld + r'\save'
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        
+        
+
+        
+        # 鏡頭讀取
+        while cam.isOpened():
+            ret,img=cam.read()#ret確認影像是否讀取:
+            #vis=img.copy()#原始鏡頭影像
+            #cv2.imshow('getcamera',vis) 
+            
+            # 模糊處理
+            blur = cv2.blur(img, (4, 4))
+            # 計算目前影格與平均影像的差異值
+            diff = cv2.absdiff(avg, blur)
+            
+            # 將圖片轉為灰階
+            gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            
+            # 篩選出變動程度大於門檻值的區域
+            ret,thresh = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+            
+            # 使用型態轉換函數去除雜訊
+            kernel = np.ones((5, 5), np.uint8)
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
+            thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+            
+
+            #OpenCV舊版，4.0以下的版本，返回三個參數
+            #cntImg,cnts, _ = cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            #OpenCV 新版，4.0及其以上的版本，返回兩個參數
+            cnts,hierarchy= cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            cnts1,hierarchy1= cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            
+            
+            def Video_capture(imgss):
+                imgss = Image.open('C:\\Users\\innolux\\Desktop\\pythonwork\\UI\\save\\0.jpg').convert('RGB')
+                size = 32,32
+                imgss = imgss.resize(size)
+                imgss = np.reshape(imgss,(1,32,32,3))
+                pred = model.predict(imgss, batch_size=1,verbose=0)
+                imgss_normalize = imgss.astype('float32') / 255.0
+                score = model.predict(imgss_normalize)
+                probability = np.max(score)
+                return pred, probability
+
+            def Image_capture(img):
+                detect_count = 0
+                for c in cnts:
+                    # 忽略太小的區域
+                    if cv2.contourArea(c)< 10000 :
+                        continue
+                    
+                    #計算等高線的外框範圍
+                    (x, y, w, h) = cv2.boundingRect(c)
+                   
+                    # 畫出外框
+                    imgsss = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.imwrite('C:\\Users\\innolux\\Desktop\\pythonwork\\UI\\save\\' + str(detect_count) + '.jpg', img[y:y + h, x:x + w])
+                    detect_count += 1
+                    
+                    return imgsss
+            
+
+                
+            
+            imgsss = Image_capture(img)
+            
+            try:
+                pred, probability = Video_capture(imgsss)
+            except AttributeError:
+                continue
+            
+            pred_label = np.argmax(pred)
+            
+            
+            #原始鏡頭影像水平翻轉
+            flipped = cv2.flip(img, 1)
+            ##imgss = Image.open('D:\\pythonwork\\save\\0.jpg').convert('RGB')
+            
+            
+            ##劉敏度設定
+
+
+            
+            
+            # 畫出等高線（除錯用）
+            ##    cv2.drawContours(img, cntsc, -1, (0, 255, 255), 2)
+            
+            
+            #以下為Traing後,收到的Data的程式
+            #當紅框內的內容物,需以下判斷後,畫面顯示產品
+            ##times = datetime.datetime.now()
+            ##text1 = 'Nowtime:{}'.format(times)
+            ##cv2.putText(flipped, text1, (10, 20), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            
+            
+            #判斷後畫面顯示OK & NG
+            ##if probability*100 <= int(float(self.value_entry.get())):
+            if probability*100 < 85:
+                text3 = 'Resoult OK/NG:NG'
+                text2 = 'PROD No.:Unknown'
+            else:
+                text3 = 'Resoult OK/NG:OK'
+                text2 = 'PROD No.:{}'.format(label_dict[pred_label])
+            
+            cv2.putText(flipped, text2, (10, 35), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            
+            cv2.putText(flipped, text3, (10, 50), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            
+            text4 = 'Resoult OK/NG:{}'.format(probability)
+            cv2.putText(flipped, text4, (10, 70), cv2.FONT_HERSHEY_PLAIN,1, (0,0,0), 1, cv2.LINE_AA)
+            # 顯示偵測結果影像
+            cv2.imshow("Flipped Horizontally", flipped)   
+            
+            #按下Q跳離畫面  
+            if cv2.waitKey(5) & 0xFF == ord('q'):
+                break    
+            
+            # 更新平均影像
+            cv2.accumulateWeighted(blur, avg_float, 0.2)
+            cv2.convertScaleAbs(avg_float)
+        cam.release() #交出控制權
+        cv2.destroyAllWindows()#關閉視窗
+
+
+
+
+
+
+def main():
+    win = tk.Tk()
+    app = Application(master=win)
+    app.mainloop()
+
+
+if __name__ == "__main__":
+    main()
